@@ -19,13 +19,28 @@ function getChromePath() {
     return process.env.PUPPETEER_EXECUTABLE_PATH;
   }
   const possiblePaths = [
+    // Windows paths
+    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+    process.env.LOCALAPPDATA ? `${process.env.LOCALAPPDATA}\\Google\\Chrome\\Application\\chrome.exe` : null,
+    process.env.PROGRAMFILES ? `${process.env.PROGRAMFILES}\\Google\\Chrome\\Application\\chrome.exe` : null,
+    process.env['PROGRAMFILES(X86)'] ? `${process.env['PROGRAMFILES(X86)']}\\Google\\Chrome\\Application\\chrome.exe` : null,
+    'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+    'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+    process.env['PROGRAMFILES(X86)'] ? `${process.env['PROGRAMFILES(X86)']}\\Microsoft\\Edge\\Application\\msedge.exe` : null,
+    process.env.PROGRAMFILES ? `${process.env.PROGRAMFILES}\\Microsoft\\Edge\\Application\\msedge.exe` : null,
+    // Linux / Mac paths
     '/usr/bin/google-chrome-stable',
     '/usr/bin/google-chrome',
     '/usr/bin/chromium',
-    '/usr/bin/chromium-browser'
-  ];
+    '/usr/bin/chromium-browser',
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+  ].filter(Boolean);
+
   for (const p of possiblePaths) {
-    if (existsSync(p)) return p;
+    try {
+      if (existsSync(p)) return p;
+    } catch (e) {}
   }
   return undefined;
 }
@@ -50,39 +65,47 @@ export async function getTodayMessageCount() {
 export function initWhatsApp(socketIO) {
   io = socketIO;
 
+  const chromePath = getChromePath();
+  console.log('🔍 Detected Chrome executable path:', chromePath || 'Puppeteer default');
+
+  const puppeteerConfig = {
+    headless: true,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-accelerated-2d-canvas',
+      '--no-first-run',
+      '--no-zygote',
+      '--disable-gpu',
+      '--disable-extensions',
+      '--disable-background-networking',
+      '--disable-background-timer-throttling',
+      '--disable-backgrounding-occluded-windows',
+      '--disable-breakpad',
+      '--disable-component-extensions-with-background-pages',
+      '--disable-default-apps',
+      '--disable-features=Translate,BackForwardCache,AcceptCHFrame,MediaRouter,OptimizationHints',
+      '--disable-ipc-flooding-protection',
+      '--disable-renderer-backgrounding',
+      '--metrics-recording-only',
+      '--mute-audio'
+    ]
+  };
+
+  if (chromePath) {
+    puppeteerConfig.executablePath = chromePath;
+  }
+
   client = new Client({
     authStrategy: new NoAuth(),
     webVersionCache: {
       type: 'remote',
-      remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html'
+      remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/{version}.html'
     },
     takeoverOnConflict: true,
     takeoverTimeoutMs: 0,
-    puppeteer: {
-      headless: true,
-      executablePath: getChromePath(),
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--disable-gpu',
-        '--disable-extensions',
-        '--disable-background-networking',
-        '--disable-background-timer-throttling',
-        '--disable-backgrounding-occluded-windows',
-        '--disable-breakpad',
-        '--disable-component-extensions-with-background-pages',
-        '--disable-default-apps',
-        '--disable-features=Translate,BackForwardCache,AcceptCHFrame,MediaRouter,OptimizationHints',
-        '--disable-ipc-flooding-protection',
-        '--disable-renderer-backgrounding',
-        '--metrics-recording-only',
-        '--mute-audio'
-      ]
-    }
+    puppeteer: puppeteerConfig
   });
 
   client.on('qr', async (qr) => {
