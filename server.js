@@ -4,7 +4,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import { connectDB } from './config/db.js';
-import { initWhatsApp, logout, handleSocketConnect } from './utils/whatsapp.js';
+import { initWhatsApp, logout, handleSocketConnect, reconnectWhatsApp, getDebugInfo } from './utils/whatsapp.js';
 import templateRoutes from './routes/templates.js';
 import contactRoutes from './routes/contacts.js';
 import messageRoutes from './routes/messages.js';
@@ -47,9 +47,13 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Health Check Route
+// Health Check & Debug Routes
 app.get('/api/health', (req, res) => {
   res.json({ success: true, message: 'WhatsApp Automation Backend is running' });
+});
+
+app.get('/api/debug', (req, res) => {
+  res.json({ success: true, data: getDebugInfo() });
 });
 
 // API Routes
@@ -57,7 +61,16 @@ app.use('/api/templates', templateRoutes);
 app.use('/api/contacts', contactRoutes);
 app.use('/api/messages', messageRoutes);
 
-// Logout endpoint
+// Reconnect & Logout endpoints
+app.post('/api/reconnect', async (req, res) => {
+  try {
+    await reconnectWhatsApp();
+    res.json({ success: true, message: 'WhatsApp reconnected' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 app.post('/api/logout', async (req, res) => {
   try {
     await logout();

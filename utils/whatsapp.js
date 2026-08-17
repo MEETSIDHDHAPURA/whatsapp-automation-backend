@@ -10,6 +10,7 @@ let io = null;
 let connectionStatus = 'disconnected';
 let connectedPhone = null;
 let latestQrCode = null;
+let lastInitError = null;
 
 const DAILY_LIMIT = 200;
 
@@ -155,11 +156,26 @@ export function initWhatsApp(socketIO) {
   });
 
   client.initialize().catch(err => {
+    lastInitError = err.message || String(err);
     console.error('Client initialization error:', err);
-    io.emit('status', { status: 'error', message: 'Failed to initialize WhatsApp client' });
+    io.emit('status', { status: 'error', message: `Failed to initialize WhatsApp client: ${lastInitError}` });
   });
 
   return client;
+}
+
+export function getDebugInfo() {
+  return {
+    status: connectionStatus,
+    phone: connectedPhone,
+    hasQr: !!latestQrCode,
+    lastError: lastInitError,
+    detectedChromePath: getChromePath(),
+    platform: process.platform,
+    arch: process.arch,
+    nodeVersion: process.version,
+    memoryUsageMB: Math.round(process.memoryUsage().rss / 1024 / 1024)
+  };
 }
 
 export async function reconnectWhatsApp() {
@@ -196,7 +212,8 @@ export function getStatus() {
   return {
     status: connectionStatus,
     phone: connectedPhone,
-    qr: latestQrCode
+    qr: latestQrCode,
+    error: lastInitError
   };
 }
 
