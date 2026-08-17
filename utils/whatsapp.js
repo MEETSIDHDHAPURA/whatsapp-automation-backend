@@ -1,5 +1,5 @@
 import pkg from 'whatsapp-web.js';
-const { Client, LocalAuth, MessageMedia } = pkg;
+const { Client, NoAuth, MessageMedia } = pkg;
 import QRCode from 'qrcode';
 import { MessageHistory } from '../models/MessageHistory.js';
 
@@ -32,9 +32,7 @@ export function initWhatsApp(socketIO) {
   io = socketIO;
 
   client = new Client({
-    authStrategy: new LocalAuth({
-      dataPath: './.wwebjs_auth'
-    }),
+    authStrategy: new NoAuth(),
     webVersionCache: {
       type: 'remote',
       remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html'
