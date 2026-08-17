@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "build": "puppeteer browsers install chrome"
   },
   "keywords": [
     "whatsapp",
@@ -23,6 +24,7 @@
     "express": "^4.21.0",
     "mongoose": "^8.8.0",
     "multer": "^2.2.0",
+    "puppeteer": "^22.0.0",
     "qrcode": "^1.5.4",
     "socket.io": "^4.7.5",
     "uuid": "^10.0.0",

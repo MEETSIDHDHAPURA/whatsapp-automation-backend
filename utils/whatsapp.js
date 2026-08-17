@@ -3,6 +3,8 @@ const { Client, NoAuth, MessageMedia } = pkg;
 import QRCode from 'qrcode';
 import { MessageHistory } from '../models/MessageHistory.js';
 
+import { existsSync } from 'fs';
+
 let client = null;
 let io = null;
 let connectionStatus = 'disconnected';
@@ -10,6 +12,22 @@ let connectedPhone = null;
 let latestQrCode = null;
 
 const DAILY_LIMIT = 200;
+
+function getChromePath() {
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+    return process.env.PUPPETEER_EXECUTABLE_PATH;
+  }
+  const possiblePaths = [
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/google-chrome',
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser'
+  ];
+  for (const p of possiblePaths) {
+    if (existsSync(p)) return p;
+  }
+  return undefined;
+}
 
 export async function getTodayMessageCount() {
   const startOfDay = new Date();
@@ -41,7 +59,7 @@ export function initWhatsApp(socketIO) {
     takeoverTimeoutMs: 0,
     puppeteer: {
       headless: true,
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+      executablePath: getChromePath(),
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
