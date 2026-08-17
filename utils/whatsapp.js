@@ -115,13 +115,27 @@ export function initWhatsApp(socketIO) {
     connectedPhone = null;
     latestQrCode = null;
     io.emit('status', { status: 'disconnected', message: `Disconnected: ${reason}` });
+    setTimeout(() => {
+      if (client) {
+        try { client.destroy(); } catch (e) {}
+        client = null;
+      }
+      initWhatsApp(io);
+    }, 2000);
   });
 
   client.on('auth_failure', (msg) => {
     console.error('❌ Auth failure:', msg);
     connectionStatus = 'auth_failure';
     latestQrCode = null;
-    io.emit('status', { status: 'auth_failure', message: 'Authentication failed. Please try again.' });
+    io.emit('status', { status: 'auth_failure', message: 'Authentication failed. Generating new QR...' });
+    setTimeout(() => {
+      if (client) {
+        try { client.destroy(); } catch (e) {}
+        client = null;
+      }
+      initWhatsApp(io);
+    }, 2000);
   });
 
   client.initialize().catch(err => {
@@ -130,6 +144,24 @@ export function initWhatsApp(socketIO) {
   });
 
   return client;
+}
+
+export async function reconnectWhatsApp() {
+  if (client) {
+    try {
+      await client.destroy();
+    } catch (e) {
+      console.error('Destroy error:', e);
+    }
+    client = null;
+  }
+  connectionStatus = 'disconnected';
+  connectedPhone = null;
+  latestQrCode = null;
+  if (io) {
+    io.emit('status', { status: 'disconnected', message: 'Reconnecting WhatsApp...' });
+  }
+  return initWhatsApp(io);
 }
 
 export function handleSocketConnect(socket) {
@@ -256,8 +288,14 @@ export async function logout() {
     } catch (e) {
       console.error('Logout error:', e);
     }
+    client = null;
     connectionStatus = 'disconnected';
     connectedPhone = null;
+    latestQrCode = null;
     io.emit('status', { status: 'disconnected', message: 'Logged out successfully' });
+
+    setTimeout(() => {
+      initWhatsApp(io);
+    }, 1000);
   }
 }
